@@ -96,7 +96,6 @@ if uploaded_file is not None:
         ax1.legend()
         st.pyplot(fig1)
 
-        # Insight Kurva (Mendeteksi Tanggal Terburuk & Terbaik)
         idx_min_dd = df['Drawdown'].idxmin()
         date_min_dd = df.loc[idx_min_dd, 'Waktu Buka'].strftime('%d %b %H:%M')
         
@@ -111,7 +110,7 @@ if uploaded_file is not None:
         date_max_profit = df.loc[idx_max_profit, 'Waktu Buka'].strftime('%d %b %H:%M')
         koin_max_profit = df.loc[idx_max_profit, 'Koin']
 
-        st.info(f"📆 **Detail Perjalanan Historis:** Badai penurunan paling parah (Max Drawdown) terjadi dalam rentang waktu **{date_peak_before} hingga {date_min_dd}**. Sebaliknya, lonjakan profit terbesar dalam satu transaksi dicetak pada **{date_max_profit}** melalui koin **{koin_max_profit}**. Jika kurva saat ini sedang turun, pertahankan *mindset* objektif, karena bot terbukti mampu melakukan *recovery* dari fase {date_min_dd}.")
+        st.info(f"📆 **Detail Perjalanan Historis:** Badai penurunan paling parah (Max Drawdown) terjadi dalam rentang waktu **{date_peak_before} hingga {date_min_dd}**. Sebaliknya, lonjakan profit terbesar dicetak pada **{date_max_profit}** melalui koin **{koin_max_profit}**. Jika kurva saat ini sedang turun, pertahankan objektivitas, karena sistem memiliki riwayat *recovery* yang baik.")
 
         # --- VISUAL 2 & 3: Distribusi Jam & Tren Makro Arah ---
         col_v1, col_v2 = st.columns(2)
@@ -123,7 +122,7 @@ if uploaded_file is not None:
             ax2.set_ylabel('Jumlah Transaksi')
             st.pyplot(fig2)
             
-            # Analisis Cerdas Jam Terbaik & Terburuk
+            # Analisis Jam Diperbaiki (Lebih Logis)
             jam_stats = df.groupby('Jam Buka').agg(Total=('Jam Buka', 'count'), Win=('Is Profit', 'sum'), Loss=('Is Loss', 'sum'))
             jam_stats['WinRate'] = jam_stats['Win'] / jam_stats['Total']
             
@@ -131,7 +130,9 @@ if uploaded_file is not None:
             jam_terbaik = jam_stats[jam_stats['Total'] >= 2]['WinRate'].idxmax() if len(jam_stats[jam_stats['Total'] >= 2]) > 0 else "N/A"
 
             if jam_terburuk != "N/A" and jam_terbaik != "N/A":
-                st.error(f"🛑 **SOP Jadwal Bot:** Jam paling berdarah dengan *Stop Loss* terbanyak adalah pukul **{int(jam_terburuk)}:00 WIB**. Pastikan bot berstatus **OFF** pada jam tersebut. Anda disarankan untuk melakukan **BOT ON** kembali pada pukul **{int(jam_terbaik)}:00 WIB**, karena secara historis ini adalah zona waktu paling stabil dengan Win Rate tertinggi.")
+                st.error(f"🛑 **Zona Rawan:** Titik puncak kerugian (Loss terbanyak) terjadi pada pukul **{int(jam_terburuk)}:00 WIB**. Sangat disarankan bot sudah **OFF** sebelum jam ini dimulai.")
+                st.success(f"✅ **Zona Emas:** Probabilitas *Win Rate* paling stabil berada di sekitar pukul **{int(jam_terbaik)}:00 WIB**. Pastikan bot berstatus **ON** pada area jam ini.")
+                st.info("💡 **Catatan SOP Manual:** Terus patuhi aturan utama kita: Matikan bot mulai **13:00 WIB** (Sesi Eropa) dan nyalakan kembali pada **23:00 WIB** (Penutupan Sesi AS). Data grafik membuktikan sesi siang/sore sangat berbahaya!")
             else:
                 st.info("💡 Belum cukup data untuk menentukan jam terbaik/terburuk secara pasti.")
 
@@ -145,7 +146,6 @@ if uploaded_file is not None:
             ax3.set_ylabel('Win Rate (%)')
             st.pyplot(fig3)
             
-            # Analisis Makro Bearish/Bullish
             if len(arah_stats) >= 2:
                 wr_long = arah_stats.loc['LONG', 'Win_Rate'] if 'LONG' in arah_stats.index else 0
                 wr_short = arah_stats.loc['SHORT', 'Win_Rate'] if 'SHORT' in arah_stats.index else 0
@@ -165,7 +165,7 @@ if uploaded_file is not None:
                 st.info("💡 Bot baru mengeksekusi satu arah. Dibutuhkan data dua arah (LONG & SHORT) untuk menganalisis tren makro.")
 
         # --- VISUAL 4: Koin Pahlawan vs Beban ---
-        st.subheader("4. Top Koin Pahlawan vs Koin Beban (Manajemen Blacklist)")
+        st.subheader("4. Top Koin Pahlawan vs Koin Beban")
         coin_pnl = df.groupby('Koin')['Net PnL'].sum().sort_values(ascending=False)
         fig4, axes = plt.subplots(1, 2, figsize=(14, 4))
         sns.barplot(x=coin_pnl.head(5).values, y=coin_pnl.head(5).index, ax=axes[0], color=COLOR_PROFIT)
@@ -175,7 +175,7 @@ if uploaded_file is not None:
         st.pyplot(fig4)
         
         koin_beban = list(coin_pnl.tail(3).index)
-        st.warning(f"⚠️ **SOP Blacklist:** Segera masukkan **{', '.join(koin_beban)}** ke daftar *blacklist* VPS Anda. **PENTING:** Koin di dunia kripto memiliki siklus rotasi likuiditas. Blacklist koin-koin ini selama **7 hingga 14 hari ke depan saja**. Setelah 2 minggu berlalu, lepaskan mereka dari blacklist secara bertahap untuk menguji apakah algoritma *market maker* pada koin tersebut sudah normal kembali.")
+        st.warning(f"⚠️ **SOP Blacklist:** Segera masukkan **{', '.join(koin_beban)}** ke daftar *blacklist* VPS Anda. **PENTING:** Blacklist koin ini selama **7 hingga 14 hari saja**. Setelah 2 minggu, lepaskan secara bertahap untuk menguji apakah algoritma *market maker* koin tersebut sudah kembali normal.")
 
         # --- VISUAL 5: Jebakan SMC ---
         st.subheader("5. Deteksi Jebakan Sinyal SMC")
@@ -188,7 +188,7 @@ if uploaded_file is not None:
         ax5.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         st.pyplot(fig5)
         
-        st.info("🔎 **Analisis Fakeout:** Fokus pada titik-titik oranye yang berada di atas garis putus-putus. Jika bot memunculkan sinyal dengan SMC tinggi namun berada di zona jam terburuk (seperti analisis nomor 2), itu adalah *Fake Breakout* (Sinyal Palsu) akibat volatilitas. Abaikan sinyal tersebut.")
+        st.info("🔎 **Analisis Fakeout:** Fokus pada titik oranye yang berada di atas garis putus-putus. Jika bot memunculkan sinyal dengan SMC tinggi namun berada di zona jam terburuk, itu adalah *Fake Breakout* (Sinyal Palsu) akibat volatilitas.")
 
         # --- VISUAL 6: Pola AI Terbaik ---
         st.subheader("6. Pola AI Terbaik (Setup Taktis)")
@@ -203,9 +203,9 @@ if uploaded_file is not None:
             st.pyplot(fig6)
             
             pola_terbaik = pola_stats_valid.index[-1]
-            st.success(f"💎 **Blueprint Kemenangan:** Pola **'{pola_terbaik}'** adalah setup algoritma terkuat Anda saat ini. Selama kondisi makro pasar tidak berubah drastis, pertahankan prioritas eksekusi pada pola ini.")
+            st.success(f"💎 **Blueprint Kemenangan:** Pola **'{pola_terbaik}'** adalah setup algoritma terkuat Anda saat ini. Pertahankan prioritas eksekusi pada pola ini.")
         else:
             st.info("💡 Sistem membutuhkan minimal 2 kali percobaan per pola AI untuk memunculkan peringkat akurat.")
 
 else:
-    st.info("💡 Menunggu dataset... Silakan upload file 'Trading Journal Sparbot - Trading Journaling.csv' di atas untuk memulai Analisis Makro Otomatis.")
+    st.info("💡 Menunggu dataset... Silakan upload file 'Trading Journal Sparbot - Trading Journaling.csv' di atas untuk memulai Analisis.")
