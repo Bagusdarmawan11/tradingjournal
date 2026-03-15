@@ -106,11 +106,17 @@ if uploaded_file is not None:
         else:
             date_peak_before = "Awal Trading"
             
-        idx_max_profit = df['Net PnL'].idxmax()
-        date_max_profit = df.loc[idx_max_profit, 'Waktu Buka'].strftime('%d %b %H:%M')
-        koin_max_profit = df.loc[idx_max_profit, 'Koin']
+        # LOGIKA PERBAIKAN: Hanya catat profit tertinggi JIKA ada profit (>0)
+        max_pnl_val = df['Net PnL'].max()
+        if max_pnl_val > 0:
+            idx_max_profit = df['Net PnL'].idxmax()
+            date_max_profit = df.loc[idx_max_profit, 'Waktu Buka'].strftime('%d %b %H:%M')
+            koin_max_profit = df.loc[idx_max_profit, 'Koin']
+            teks_profit = f"Sebaliknya, lonjakan profit terbesar (+${max_pnl_val:.2f}) dicetak pada **{date_max_profit}** melalui koin **{koin_max_profit}**."
+        else:
+            teks_profit = "Saat ini sistem belum mencetak lonjakan profit yang signifikan (Net PnL positif)."
 
-        st.info(f"📆 **Detail Perjalanan Historis:** Badai penurunan paling parah (Max Drawdown) terjadi dalam rentang waktu **{date_peak_before} hingga {date_min_dd}**. Sebaliknya, lonjakan profit terbesar dicetak pada **{date_max_profit}** melalui koin **{koin_max_profit}**. Jika kurva saat ini sedang turun, pertahankan objektivitas, karena sistem memiliki riwayat *recovery* yang baik.")
+        st.info(f"📆 **Detail Perjalanan Historis:** Badai penurunan paling parah (Max Drawdown) terjadi dalam rentang waktu **{date_peak_before} hingga {date_min_dd}**. {teks_profit} Jika kurva saat ini sedang turun, pertahankan objektivitas, karena sistem memiliki riwayat *recovery* yang baik.")
 
         # --- VISUAL 2 & 3: Distribusi Jam & Tren Makro Arah ---
         col_v1, col_v2 = st.columns(2)
@@ -122,7 +128,6 @@ if uploaded_file is not None:
             ax2.set_ylabel('Jumlah Transaksi')
             st.pyplot(fig2)
             
-            # Analisis Jam Diperbaiki (Lebih Logis)
             jam_stats = df.groupby('Jam Buka').agg(Total=('Jam Buka', 'count'), Win=('Is Profit', 'sum'), Loss=('Is Loss', 'sum'))
             jam_stats['WinRate'] = jam_stats['Win'] / jam_stats['Total']
             
@@ -132,7 +137,7 @@ if uploaded_file is not None:
             if jam_terburuk != "N/A" and jam_terbaik != "N/A":
                 st.error(f"🛑 **Zona Rawan:** Titik puncak kerugian (Loss terbanyak) terjadi pada pukul **{int(jam_terburuk)}:00 WIB**. Sangat disarankan bot sudah **OFF** sebelum jam ini dimulai.")
                 st.success(f"✅ **Zona Emas:** Probabilitas *Win Rate* paling stabil berada di sekitar pukul **{int(jam_terbaik)}:00 WIB**. Pastikan bot berstatus **ON** pada area jam ini.")
-                st.info("💡 **Catatan SOP Manual:** Terus patuhi aturan utama kita: Matikan bot mulai **13:00 WIB** (Sesi Eropa) dan nyalakan kembali pada **23:00 WIB** (Penutupan Sesi AS). Data grafik membuktikan sesi siang/sore sangat berbahaya!")
+                st.info("💡 **Catatan SOP Manual:** Terus patuhi aturan utama kita: Matikan bot mulai **13:00 WIB** (Sesi Eropa) dan nyalakan kembali pada **23:00 WIB** (Penutupan Sesi AS).")
             else:
                 st.info("💡 Belum cukup data untuk menentukan jam terbaik/terburuk secara pasti.")
 
@@ -174,8 +179,13 @@ if uploaded_file is not None:
         axes[1].set_title('Top 5 Koin Beban (Blacklist)')
         st.pyplot(fig4)
         
-        koin_beban = list(coin_pnl.tail(3).index)
-        st.warning(f"⚠️ **SOP Blacklist:** Segera masukkan **{', '.join(koin_beban)}** ke daftar *blacklist* VPS Anda. **PENTING:** Blacklist koin ini selama **7 hingga 14 hari saja**. Setelah 2 minggu, lepaskan secara bertahap untuk menguji apakah algoritma *market maker* koin tersebut sudah kembali normal.")
+        # LOGIKA PERBAIKAN: Hanya blacklist JIKA koin tersebut benar-benar bernilai minus (Kerugian)
+        koin_minus_df = coin_pnl[coin_pnl < 0]
+        if not koin_minus_df.empty:
+            koin_beban = list(koin_minus_df.tail(3).index)
+            st.warning(f"⚠️ **SOP Blacklist:** Segera masukkan **{', '.join(koin_beban)}** ke daftar *blacklist* VPS Anda karena mereka terbukti menyedot saldo. **PENTING:** Blacklist koin ini selama **7 hingga 14 hari saja**, setelah itu lepaskan bertahap untuk *testing*.")
+        else:
+            st.success("🎉 **Luar Biasa!** Seluruh koin Anda saat ini mencetak Net Profit positif. Tidak ada koin yang perlu dimasukkan ke dalam daftar Blacklist saat ini.")
 
         # --- VISUAL 5: Jebakan SMC ---
         st.subheader("5. Deteksi Jebakan Sinyal SMC")
